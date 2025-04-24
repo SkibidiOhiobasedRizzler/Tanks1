@@ -1,0 +1,368 @@
+# Импорт необходимых модулей
+from pygame import *  # Основной модуль pygame для создания игры
+import pygame_menu  # Модуль для создания меню
+
+# Инициализация pygame
+init()
+
+# Установка размеров игрового окна
+WINDOW_WIDTH = 448
+WINDOW_HEIGHT = 320
+
+# Создание игрового окна
+window = display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+display.set_caption("Tanks")  # Установка заголовка окна
+
+# Загрузка звуковых эффектов
+try:
+    # Звук начала уровня
+    level_start_sound = mixer.Sound("jopa/level_start.mp3")
+    # Звук взрыва танка
+    explosion_sound = mixer.Sound("jopa/destroy.wav")
+except:
+    print("Не удалось загрузить звуки")
+    # Если звуки не загрузились, устанавливаем None
+    level_start_sound = None
+    explosion_sound = None
+
+# Определение трех разных карт для игры
+# 0 - пустое пространство, 1 - бронированный блок, 2 - кирпичный блок
+map1 = [
+    [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0],
+    [1, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0],
+    [0, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 0],
+    [0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0],
+    [1, 0, 2, 0, 0, 1, 1, 1, 1, 0, 0, 2, 0, 1],
+    [1, 0, 2, 0, 0, 1, 0, 0, 1, 0, 0, 2, 0, 1],
+    [0, 2, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 2, 0],
+    [0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0],
+    [0, 0, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 0, 1],
+    [0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1],
+]
+
+map2 = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+    [0, 1, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 1, 0],
+    [0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0],
+    [0, 0, 0, 2, 0, 1, 1, 1, 1, 0, 2, 0, 0, 0],
+    [0, 0, 0, 2, 0, 1, 0, 0, 1, 0, 2, 0, 0, 0],
+    [0, 1, 0, 2, 0, 1, 0, 0, 1, 0, 2, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+]
+
+map3 = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+    [0, 2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 0],
+    [0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0],
+    [0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0],
+    [0, 2, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 2, 0],
+    [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+]
+
+# Переменная для хранения выбранной карты
+selected_map = None
+
+# Создание меню выбора карты
+menu = pygame_menu.Menu(
+    'Выбор карты',  # Заголовок меню
+    WINDOW_WIDTH, WINDOW_HEIGHT,  # Размеры меню
+    theme=pygame_menu.themes.THEME_BLUE  # Стиль меню
+)
+
+
+# Функция запуска игры с выбранной картой
+def start_game(selected_map_index):
+    global selected_map
+    maps = [map1, map2, map3]  # Список доступных карт
+    selected_map = maps[selected_map_index]  # Выбор карты по индексу
+    menu.disable()  # Закрытие меню
+
+    # Воспроизведение звука начала уровня, если он загружен
+    if level_start_sound:
+        level_start_sound.play()
+
+
+# Добавление кнопок в меню
+menu.add.button('Карта 1 (Симметричная)', lambda: start_game(0))  # Кнопка для 1 карты
+menu.add.button('Карта 2 (Открытая)', lambda: start_game(1))  # Кнопка для 2 карты
+menu.add.button('Карта 3 (Лабиринт)', lambda: start_game(2))  # Кнопка для 3 карты
+menu.add.button('Выход', pygame_menu.events.EXIT)  # Кнопка выхода
+
+# Запуск главного цикла меню
+menu.mainloop(window)
+
+# Основной код игры выполняется только если выбрана карта (не нажата кнопка выхода)
+if selected_map is not None:
+    # Класс игрового спрайта (базовый класс для всех объектов)
+    class GameSprite(sprite.Sprite):
+        def __init__(self, image_name, x, y, width, height, speed):
+            super().__init__()  # Инициализация родительского класса
+            self.image = transform.scale(image.load(image_name),
+                                         (width, height))  # Загрузка и масштабирование изображения
+            self.speed = speed  # Скорость объекта
+            self.rect = self.image.get_rect()  # Получение прямоугольника для коллизий
+            self.rect.x = x  # Установка начальной позиции по X
+            self.rect.y = y  # Установка начальной позиции по Y
+
+        # Метод отрисовки спрайта на экране
+        def reset(self, screen):
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+
+
+    # Класс танка (наследуется от GameSprite)
+    class Tank(GameSprite):
+        def __init__(self, image_name, x, y, width, height, speed, player_num):
+            super().__init__(image_name, x, y, width, height, speed)
+            self.direction = "UP"  # Начальное направление танка
+            self.original_image = transform.scale(image.load(image_name),
+                                                  (width, height))  # Оригинальное изображение для поворотов
+            self.player_num = player_num  # Номер игрока (1 или 2)
+            self.alive = True  # Флаг, жив ли танк
+
+        # Метод обновления состояния танка
+        def update(self, screen):
+            if not self.alive:  # Если танк уничтожен, не обновляем
+                return
+
+            keys = key.get_pressed()  # Получаем состояние всех клавиш
+            old_x = self.rect.x  # Сохраняем старую позицию для отката при коллизии
+            old_y = self.rect.y
+
+            # Управление для первого игрока (WASD)
+            if self.player_num == 1:
+                if keys[K_a] and self.rect.x > 0:  # Движение влево
+                    self.rect.x -= self.speed
+                    self.direction = "LEFT"
+                if keys[K_d] and self.rect.x < 416:  # Движение вправо
+                    self.rect.x += self.speed
+                    self.direction = "RIGHT"
+                if keys[K_s] and self.rect.y < 289:  # Движение вниз
+                    self.rect.y += self.speed
+                    self.direction = "DOWN"
+                if keys[K_w] and self.rect.y > 0:  # Движение вверх
+                    self.rect.y -= self.speed
+                    self.direction = "UP"
+            else:  # Управление для второго игрока (стрелки)
+                if keys[K_LEFT] and self.rect.x > 0:
+                    self.rect.x -= self.speed
+                    self.direction = "LEFT"
+                if keys[K_RIGHT] and self.rect.x < 416:
+                    self.rect.x += self.speed
+                    self.direction = "RIGHT"
+                if keys[K_DOWN] and self.rect.y < 289:
+                    self.rect.y += self.speed
+                    self.direction = "DOWN"
+                if keys[K_UP] and self.rect.y > 0:
+                    self.rect.y -= self.speed
+                    self.direction = "UP"
+
+            # Проверка коллизий с блоками карты
+            for block in map_1:
+                if self.rect.colliderect(block.rect):
+                    # Если есть столкновение, возвращаем старые координаты
+                    self.rect.x = old_x
+                    self.rect.y = old_y
+                    break
+
+            self.rotate_tank()  # Поворачиваем танк согласно направлению
+            self.reset(screen)  # Отрисовываем танк
+
+        # Метод поворота изображения танка
+        def rotate_tank(self):
+            if self.direction == "UP":
+                self.image = transform.rotate(self.original_image, 0)
+            elif self.direction == "DOWN":
+                self.image = transform.rotate(self.original_image, 180)
+            elif self.direction == "LEFT":
+                self.image = transform.rotate(self.original_image, 90)
+            elif self.direction == "RIGHT":
+                self.image = transform.rotate(self.original_image, -90)
+
+        # Метод стрельбы
+        def fire(self):
+            if not self.alive:  # Если танк уничтожен, не может стрелять
+                return
+
+            # Выбор изображения пули в зависимости от игрока
+            bullet_img = "jopa/bullet.png" if self.player_num == 1 else "jopa/bullet2.jfif"
+
+            # Создание пули в зависимости от направления танка
+            if self.direction == "UP":
+                bullet = Bullet(bullet_img, self.rect.centerx - 5, self.rect.top, 10, 20, 15, self.direction,
+                                self.player_num)
+            elif self.direction == "DOWN":
+                bullet = Bullet(bullet_img, self.rect.centerx - 5, self.rect.bottom, 10, 20, 15, self.direction,
+                                self.player_num)
+            elif self.direction == "LEFT":
+                bullet = Bullet(bullet_img, self.rect.left, self.rect.centery - 5, 20, 10, 15, self.direction,
+                                self.player_num)
+            elif self.direction == "RIGHT":
+                bullet = Bullet(bullet_img, self.rect.right, self.rect.centery - 5, 20, 10, 15, self.direction,
+                                self.player_num)
+
+            # Добавление пули в группу спрайтов
+            bullets.add(bullet)
+
+
+    # Класс пули (наследуется от GameSprite)
+    class Bullet(GameSprite):
+        def __init__(self, image_name, x, y, width, height, speed, direction, player_num):
+            super().__init__(image_name, x, y, width, height, speed)
+            self.direction = direction  # Направление движения
+            self.player_num = player_num  # Номер игрока, выпустившего пулю
+            if direction == "LEFT" or direction == "RIGHT":
+                self.image = transform.rotate(self.image, 90)  # Поворот изображения для горизонтальных пуль
+
+        # Метод обновления положения пули
+        def update(self):
+            if self.direction == "UP":
+                self.rect.y -= self.speed  # Движение вверх
+                if self.rect.y <= 0:  # Если вышла за границу экрана
+                    self.kill()  # Удаляем пулю
+            elif self.direction == "DOWN":
+                self.rect.y += self.speed
+                if self.rect.y >= 320:
+                    self.kill()
+            elif self.direction == "LEFT":
+                self.rect.x -= self.speed
+                if self.rect.x <= 0:
+                    self.kill()
+            elif self.direction == "RIGHT":
+                self.rect.x += self.speed
+                if self.rect.x >= 448:
+                    self.kill()
+
+
+    # Класс блока карты
+    class Block(sprite.Sprite):
+        def __init__(self, filename, x, y, block_type):
+            super().__init__()
+            self.image = image.load(filename)  # Загрузка изображения блока
+            self.rect = self.image.get_rect()  # Получение прямоугольника для коллизий
+            self.rect.x = x  # Позиция X
+            self.rect.y = y  # Позиция Y
+            self.type = block_type  # Тип блока ("armor" или "brick")
+
+        # Метод отрисовки блока
+        def draw(self, screen):
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+
+
+    # Создание карты на основе выбранного варианта
+    map_1 = sprite.Group()  # Группа спрайтов для блоков карты
+    for i in range(len(selected_map)):  # Проход по строкам карты
+        for j in range(len(selected_map[i])):  # Проход по столбцам карты
+            if selected_map[i][j] == 1:  # Если 1 - бронированный блок
+                map_b = Block("jopa/block_armor.png", 32 * j, 32 * i, "armor")
+            elif selected_map[i][j] == 2:  # Если 2 - кирпичный блок
+                map_b = Block("jopa/block_brick.png", 32 * j, 32 * i, "brick")
+            else:  # 0 - пустое пространство
+                continue
+            map_1.add(map_b)  # Добавляем блок в группу
+
+    bullets = sprite.Group()  # Группа для хранения пуль
+    # Загрузка фонового изображения
+    background = transform.scale(image.load("jopa/black.jpg"), (WINDOW_WIDTH, WINDOW_HEIGHT))
+    # Создание танка игрока 1
+    player1 = Tank("jopa/tank1.png", 0, 280, 30, 30, 3, 1)
+    # Создание танка игрока 2
+    player2 = Tank("jopa/tank2.png", 400, 0, 30, 30, 3, 2)
+
+    # Инициализация шрифта для текста
+    font.init()
+    font = font.SysFont('Arial', 36)  # Шрифт Arial размером 36
+
+    # Настройка таймера
+    timer = time.Clock()
+    fps = 60  # Количество кадров в секунду
+    end_game = False  # Флаг завершения игры
+    finished = False  # Флаг завершения раунда
+    winner = None  # Победитель раунда
+
+    # Главный игровой цикл
+    while not end_game:
+        # Обработка событий
+        for e in event.get():
+            if e.type == QUIT:  # Если закрыли окно
+                end_game = True
+            elif e.type == KEYDOWN:  # Если нажата клавиша
+                if e.key == K_SPACE:  # Пробел - выстрел 1 игрока
+                    player1.fire()
+                elif e.key == K_RETURN:  # Enter - выстрел 2 игрока
+                    player2.fire()
+
+        if not finished:  # Если раунд не завершен
+            window.blit(background, (0, 0))  # Отрисовка фона
+            map_1.draw(window)  # Отрисовка карты
+
+            # Обновление и отрисовка танков, если они живы
+            if player1.alive:
+                player1.update(window)
+            if player2.alive:
+                player2.update(window)
+
+            bullets.update()  # Обновление положения всех пуль
+            bullets.draw(window)  # Отрисовка всех пуль
+
+            # Проверка столкновений пуль с блоками
+            for bullet in bullets:
+                for block in map_1:
+                    if bullet.rect.colliderect(block.rect):  # Если пуля попала в блок
+                        bullet.kill()  # Удаляем пулю
+                        if block.type == "brick":  # Если блок кирпичный
+                            map_1.remove(block)  # Удаляем блок
+                        break  # Прерываем проверку для этой пули
+
+            # Проверка столкновений пуль с танками
+            for bullet in bullets:
+                # Если пуля попала в танк 1 и выпущена танком 2
+                if bullet.rect.colliderect(player1.rect) and player1.alive and bullet.player_num == 2:
+                    player1.alive = False  # Уничтожаем танк
+                    bullet.kill()  # Удаляем пулю
+                    if explosion_sound:  # Воспроизводим звук взрыва
+                        explosion_sound.play()
+                # Если пуля попала в танк 2 и выпущена танком 1
+                elif bullet.rect.colliderect(player2.rect) and player2.alive and bullet.player_num == 1:
+                    player2.alive = False
+                    bullet.kill()
+                    if explosion_sound:
+                        explosion_sound.play()
+
+            # Определение победителя раунда
+            if not player1.alive and not player2.alive:  # Оба танка уничтожены
+                winner = "DRAW"
+                finished = True
+            elif not player1.alive:  # Уничтожен танк 1
+                winner = "PLAYER 2 WINS!"
+                finished = True
+            elif not player2.alive:  # Уничтожен танк 2
+                winner = "PLAYER 1 WINS!"
+                finished = True
+
+            # Отображение результата раунда
+            if finished:
+                # Выбор цвета текста в зависимости от победителя
+                if winner == "PLAYER 1 WINS!":
+                    color = (0, 255, 0)  # Зеленый для первого игрока
+                elif winner == "PLAYER 2 WINS!":
+                    color = (255, 0, 0)  # Красный для второго игрока
+                else:
+                    color = (255, 255, 255)  # Белый для ничьей
+
+                # Создание текстовой поверхности
+                text = font.render(winner, True, color)
+                # Отрисовка текста по центру экрана
+                window.blit(text, (WINDOW_WIDTH // 2 - text.get_width() // 2,
+                                   WINDOW_HEIGHT // 2 - text.get_height() // 2))
+
+        # Обновление экрана
+        display.update()
+        # Ограничение FPS
+        timer.tick(fps)
